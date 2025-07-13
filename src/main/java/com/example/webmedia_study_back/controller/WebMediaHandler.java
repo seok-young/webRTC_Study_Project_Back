@@ -72,6 +72,8 @@ public class WebMediaHandler extends TextWebSocketHandler{
             agent.handleMessage(session, messageContainer.getMessageId(), messageContainer.getType(), messageContainer.getMessage());
         } catch (Exception e){
             log.debug("handleTextMessage error", e);
+
+            session.close(new CloseStatus(3000, "알수없는 에러"));
         }
     }
 }
