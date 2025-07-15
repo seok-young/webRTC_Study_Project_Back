@@ -14,6 +14,7 @@ import com.example.webmedia_study_back.model.message.JoinRequestMessage;
 import com.example.webmedia_study_back.model.message.JoinResponseMessage;
 import com.example.webmedia_study_back.model.message.UserJoinedEventMessage;
 import com.example.webmedia_study_back.model.message.UserPublishedChangeReportMessage;
+import com.example.webmedia_study_back.model.message.UserStateChangedEventMessage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class RoomAgent {
@@ -63,6 +64,8 @@ public class RoomAgent {
                 handleUserJoined(session, messageId, message);
             } else if (MessageType.UserPublishedChangeReport.equals(type)) {
                 final UserPublishedChangeReportMessage message = objectMapper.readValue(messageStr, UserPublishedChangeReportMessage.class); 
+            
+                handleUserPublishedChangeReport(session, messageId, message);
             } else {
                 final ErrorResponseMessage response = ErrorResponseMessage.builder()
                     .errorCode(ErrorCode.BadRequest)
@@ -120,6 +123,24 @@ public class RoomAgent {
                 .build();
 
             messageSender.sendEventMessage(anotherUser.getSession(), roomId, MessageType.UserJoinedEvent, eventMessage);
+        }
+    }
+
+    private void handleUserPublishedChangeReport(WebSocketSession session, String messageId, UserPublishedChangeReportMessage message) throws Exception{
+        final RoomUser user = roomUserMap.get(session.getId());
+
+        if((user != null) && (user.isPublished() != message.isPublished())) {
+            user.setPublished(message.isPublished());
+
+            final RoomUser anotherUser = getAnotherUser(user);
+            if(anotherUser != null) {
+                final UserStateChangedEventMessage eventMessage = UserStateChangedEventMessage.builder()
+                    .userId(user.getUserId())
+                    .published(message.isPublished())
+                    .build();
+
+                messageSender.sendEventMessage(anotherUser.getSession(), roomId, MessageType.UserStateChangedEvent, eventMessage);
+            }
         }
     }
 
