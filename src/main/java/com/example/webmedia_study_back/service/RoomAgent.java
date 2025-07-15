@@ -13,6 +13,7 @@ import com.example.webmedia_study_back.model.message.ErrorResponseMessage;
 import com.example.webmedia_study_back.model.message.JoinRequestMessage;
 import com.example.webmedia_study_back.model.message.JoinResponseMessage;
 import com.example.webmedia_study_back.model.message.UserJoinedEventMessage;
+import com.example.webmedia_study_back.model.message.UserLeftEventMessage;
 import com.example.webmedia_study_back.model.message.UserPublishedChangeReportMessage;
 import com.example.webmedia_study_back.model.message.UserStateChangedEventMessage;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -51,7 +52,22 @@ public class RoomAgent {
     }
 
     public void handleUserLeft(WebSocketSession session) throws Exception {
-        
+        synchronized(lockObj){
+            final RoomUser user = roomUserMap.get(session.getId());
+
+            if(user != null) {
+                roomUserMap.remove(session.getId());
+
+                final RoomUser anotherUser = this.getAnotherUser(user);
+                if(anotherUser != null) {
+                    final UserLeftEventMessage eventMessage = UserLeftEventMessage.builder()
+                        .userId(user.getUserId())
+                        .build();
+
+                    messageSender.sendEventMessage(anotherUser.getSession(), roomId, MessageType.UserLeftEvent, eventMessage);
+                }
+            }
+        }
     }
     
     public void handleMessage(WebSocketSession session, 
